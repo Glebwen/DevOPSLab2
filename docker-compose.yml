@@ -1,14 +1,14 @@
-version: '3.8'
-
 services:
   backend:
     build: .
+    image: localhost:5000/devopslab2-backend:latest
     restart: unless-stopped
     volumes:
       - ./db.sqlite3:/app/db.sqlite3
 
   frontend:
     build: ./client
+    image: localhost:5000/devopslab2-frontend:latest
     restart: unless-stopped
     ports:
       - "8081:80"
