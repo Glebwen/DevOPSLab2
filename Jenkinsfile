@@ -36,7 +36,6 @@ pipeline {
             when { branch 'main' }
             steps {
                 bat """
-                    :: Проверяем, запущен ли локальный Registry, если нет — запускаем
                     docker ps -a --filter "name=local-registry" --format "{{.Names}}" | findstr "local-registry" >nul
                     if errorlevel 1 (
                         echo "Запускаем локальный Docker Registry..."
