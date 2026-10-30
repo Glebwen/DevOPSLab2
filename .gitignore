@@ -19,3 +19,5 @@ dist/
 .vscode/
 .idea/
 Thumbs.db
+
+db.sqlite3

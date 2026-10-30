@@ -2,84 +2,60 @@ pipeline {
     agent any
     
     environment {
-        PYTHON = 'C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python313\\python.exe'
-        VENV = '.venv-ci'
-        REPO = 'https://github.com/Glebwen/DevOPSLab1.git'
+        PATH = "C:\\Program Files\\Docker\\Docker\\resources\\bin;${env.PATH}"
+        REPO = 'https://github.com/Glebwen/DevOPSLab2.git'
+        DOCKER_BUILDKIT = '1'
     }
     
     stages {
         stage('Checkout') {
-            steps { checkout scm }
-        }
-        
-        stage('Setup') {
-            steps {
-                bat """
-                    if not exist %VENV% ("${PYTHON}" -m venv %VENV%)
-                    "%VENV%\\Scripts\\python.exe" -m pip install -r requirements.txt
-                """
+            steps { 
+                checkout scm 
             }
         }
         
-        stage('Test') {
+        stage('Docker Info') {
             steps {
-                bat """
-                    if not exist reports mkdir reports
-                    "%VENV%\\Scripts\\python.exe" -m pytest --junitxml=reports/junit.xml
-                """
+                bat 'docker version'
             }
-            post { always { junit 'reports/junit.xml' } }
+        }
+        
+        stage('Test (Build & Pytest in Container)') {
+            steps {
+                bat 'docker build -t devopslab2-test .'
+                bat 'docker run --rm devopslab2-test python -m pytest'
+            }
         }
         
         stage('Deploy') {
             when { branch 'main' }
             steps {
                 bat """
-                    if not exist C:\\deploy mkdir C:\\deploy
-                    if exist C:\\deploy\\DevOPSLab1 (
-                        cd /d C:\\deploy\\DevOPSLab1 & git pull
+                    if not exist C:\\deploy\\DevOPSLab2 mkdir C:\\deploy\\DevOPSLab2
+                    if exist C:\\deploy\\DevOPSLab2\\.git (
+                        cd /d C:\\deploy\\DevOPSLab2 & git pull
                     ) else (
-                        git clone %REPO% C:\\deploy\\DevOPSLab1
+                        git clone %REPO% C:\\deploy\\DevOPSLab2
                     )
-                    cd /d C:\\deploy\\DevOPSLab1
-
-                    :: Ставим зависимости
-                    if not exist .venv ("${PYTHON}" -m venv .venv)
-                    .venv\\Scripts\\python.exe -m pip install -r requirements.txt
-                    .venv\\Scripts\\python.exe manage.py migrate
-                    cd client
-                    call npm install
-                    cd ..
-
-                    :: Проверяем, что NSSM на месте
-                    if not exist C:\\deploy\\nssm.exe (
-                        echo "ОШИБКА: Файл C:\\deploy\\nssm.exe не найден!"
-                        exit /b 1
-                    )
-
-                    :: Удаляем старые службы
-                    C:\\deploy\\nssm.exe stop WebGlebBackend 2>nul
-                    C:\\deploy\\nssm.exe remove WebGlebBackend confirm 2>nul
-                    C:\\deploy\\nssm.exe stop WebGlebFrontend 2>nul
-                    C:\\deploy\\nssm.exe remove WebGlebFrontend confirm 2>nul
-
-                    :: Создаем Бэкенд
-                    C:\\deploy\\nssm.exe install WebGlebBackend "C:\\deploy\\DevOPSLab1\\.venv\\Scripts\\python.exe" "manage.py runserver 0.0.0.0:8000"
-                    if errorlevel 1 exit /b 1
-                    C:\\deploy\\nssm.exe set WebGlebBackend AppDirectory "C:\\deploy\\DevOPSLab1"
+                    cd /d C:\\deploy\\DevOPSLab2
                     
-                    :: Создаем Фронтенд (Убедись, что путь к npm.cmd правильный!)
-                    C:\\deploy\\nssm.exe install WebGlebFrontend "C:\\Program Files\\nodejs\\npm.cmd" "run dev"
-                    if errorlevel 1 exit /b 1
-                    C:\\deploy\\nssm.exe set WebGlebFrontend AppDirectory "C:\\deploy\\DevOPSLab1\\client"
-
-                    :: Запускаем
-                    C:\\deploy\\nssm.exe start WebGlebBackend
-                    C:\\deploy\\nssm.exe start WebGlebFrontend
+                    :: Останавливаем старые контейнеры и удаляем их
+                    docker compose down
                     
-                    ping 127.0.0.1 -n 6 > nul
+                    :: Собираем новые образы и запускаем
+                    docker compose up -d --build
                 """
             }
+        }
+    }
+    
+    post {
+        success {
+            echo '=== Pipeline SUCCESS ==='
+            echo 'Сайт доступен по адресу: http://localhost:8081'
+        }
+        failure {
+            echo '=== Pipeline FAILED ==='
         }
     }
 }

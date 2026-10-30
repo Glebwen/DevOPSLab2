@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - ./db.sqlite3:/app/db.sqlite3
+
+  frontend:
+    build: ./client
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend
