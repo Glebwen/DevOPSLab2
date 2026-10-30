@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+reports/
+
+# Django
+db.sqlite3
+/media/
+/staticfiles/
+
+# Node
+node_modules/
+dist/
+
+# OS / IDE
+.vscode/
+.idea/
+Thumbs.db
