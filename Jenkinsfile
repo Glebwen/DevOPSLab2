@@ -7,6 +7,10 @@ pipeline {
         DOCKER_BUILDKIT = '1'
     }
     
+        triggers {
+        pollSCM('H/1 * * * *') 
+    }
+    
     stages {
         stage('Checkout') {
             steps { 
