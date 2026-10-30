@@ -67,14 +67,23 @@ pipeline {
                     )
                     cd /d C:\\deploy\\DevOPSLab2
                     
-                    :: Останавливаем старые контейнеры
-                    docker compose down
+                    :: КРИТИЧНО: Создаем файл базы, если его нет (чтобы Docker не создал папку)
+                    if not exist db.sqlite3 type nul > db.sqlite3
+                    
+                    :: Останавливаем старые контейнеры (|| exit /b 0 значит "не падать, если их нет")
+                    docker compose down --remove-orphans || exit /b 0
+                    
+                    :: Принудительно удаляем старые контейнеры, если они зависли
+                    docker rm -f devopslab2-backend-1 devopslab2-frontend-1 2>nul || exit /b 0
                     
                     :: Скачиваем свежие образы из локального Registry
                     docker compose pull
                     
                     :: Запускаем
                     docker compose up -d
+                    
+                    :: Ждем 5 секунд, чтобы контейнеры поднялись
+                    ping 127.0.0.1 -n 6 > nul
                     
                     :: Применяем миграции
                     docker compose exec -T backend python manage.py migrate
